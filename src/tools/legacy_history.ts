@@ -2,6 +2,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import { jsonResult } from "openclaw/plugin-sdk/core";
 import type { AnyAgentTool } from "openclaw/plugin-sdk/core";
 import type { PluginContext } from "../types.js";
+import { callWechatTool, extractText, extractWechatMcpEndpoint } from "../wechat/mcp_client.js";
 
 const Params = Type.Object({
   primary_id: Type.String(),
@@ -13,20 +14,31 @@ export function createLegacyHistoryTool(ctx: PluginContext): AnyAgentTool {
   return {
     name: "customer.legacy_history",
     label: "历史聊天回溯",
-    description: "Retrieve historical chat messages for a primary_id from the wechat-decrypt MCP server (read-only).",
+    description: "READ-ONLY pull of historical chat messages for a primary_id from the wechat-decrypt MCP server. Requires wxid_legacy bound to the primary_id. Returns the raw text payload from get_chat_history. Never writes to the source.",
     parameters: Params,
     async execute(_toolCallId: string, params: Static<typeof Params>) {
-      // STUB: should call the registered wechat MCP server (named via config.wechatMcpServerName, default "wechat")
-      // Pseudocode:
-      //   const mcp = ctx.api.runtime.mcp.getServer(ctx.config.wechatMcpServerName ?? "wechat");
-      //   return jsonResult(await mcp.callTool("get_chat_history", { talker: row.wxid_legacy, limit, before }));
       const row = ctx.db.prepare("SELECT wxid_legacy FROM customer_map WHERE primary_id = ?").get(params.primary_id) as
         | { wxid_legacy: string | null }
         | undefined;
       if (!row?.wxid_legacy) {
-        return jsonResult({ messages: [], reason: "no wxid_legacy bound to this primary_id" });
+        return jsonResult({ messages_text: "", reason: "no wxid_legacy bound to this primary_id" });
       }
-      return jsonResult({ messages: [], reason: "stub — wire to wechat MCP server" });
+      const cfg = ctx.api.runtime.config.loadConfig();
+      const serverName = ctx.config.wechatMcpServerName ?? "wechat";
+      const serverConfig = (cfg.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
+      if (!serverConfig) {
+        return jsonResult({ messages_text: "", reason: `mcp.servers.${serverName} not configured` });
+      }
+      const endpoint = extractWechatMcpEndpoint(serverConfig);
+      if (!endpoint) {
+        return jsonResult({ messages_text: "", reason: `cannot extract URL/headers from mcp.servers.${serverName}` });
+      }
+
+      const args: Record<string, unknown> = { talker: row.wxid_legacy, limit: params.limit ?? 50 };
+      if (typeof params.before_unix === "number") args.before = params.before_unix;
+      const result = await callWechatTool(endpoint, "get_chat_history", args);
+      const text = extractText(result);
+      return jsonResult({ wxid_legacy: row.wxid_legacy, primary_id: params.primary_id, messages_text: text });
     },
   };
 }

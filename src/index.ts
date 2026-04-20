@@ -7,6 +7,10 @@ import { createMergeTool } from "./tools/merge.js";
 import { createLegacyHistoryTool } from "./tools/legacy_history.js";
 import { createRecentSignalsTool } from "./tools/recent_signals.js";
 import { createRefreshIndexTool } from "./tools/refresh_index.js";
+import { createImportLegacyContactsTool } from "./tools/import_legacy_contacts.js";
+import { createListCustomersTool } from "./tools/list_customers.js";
+import { createSearchCustomersTool } from "./tools/search_customers.js";
+import { createShowCustomerTool } from "./tools/show_customer.js";
 import type { CustomerBridgeConfig, PluginContext } from "./types.js";
 
 const plugin = {
@@ -31,6 +35,10 @@ const plugin = {
     api.registerTool(createLegacyHistoryTool(ctx));
     api.registerTool(createRecentSignalsTool(ctx));
     api.registerTool(createRefreshIndexTool(ctx));
+    api.registerTool(createImportLegacyContactsTool(ctx));
+    api.registerTool(createListCustomersTool(ctx));
+    api.registerTool(createSearchCustomersTool(ctx));
+    api.registerTool(createShowCustomerTool(ctx));
 
     startIndexRunner(ctx);
   },

@@ -1,6 +1,6 @@
 {
   "name": "@gthneo/openclaw-customer-bridge-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenClaw plugin: cross-channel customer identity bridge (WeChat wxid ↔ WeCom external_userid ↔ unionid) + 12-class chat classifier + router skills",
   "type": "module",
   "main": "dist/index.js",
@@ -47,8 +47,10 @@
     "openclaw": ">=2026.4.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@sinclair/typebox": "^0.34.49",
     "better-sqlite3": "^11.7.0",
+    "eventsource": "^2.0.2",
     "sharp": "^0.33.0"
   },
   "devDependencies": {
