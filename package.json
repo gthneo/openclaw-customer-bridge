@@ -17,6 +17,11 @@
     "openclaw.plugin.json",
     "README.md"
   ],
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

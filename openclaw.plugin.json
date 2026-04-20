@@ -37,16 +37,18 @@
         "description": "Name of the registered openclaw MCP server that proxies wechat-decrypt"
       },
       "wecomCorpId": {
-        "type": "string"
+        "type": "string",
+        "description": "WeCom enterprise corpid; used for refresh_index / WeCom API calls"
       },
       "wecomAgentId": {
-        "type": "string"
+        "type": "string",
+        "description": "Self-built application agentid"
       },
       "wecomSecret": {
         "type": "string",
-        "secret": true
+        "secret": true,
+        "description": "Self-built application secret"
       }
-    },
-    "required": ["wecomCorpId", "wecomAgentId", "wecomSecret"]
+    }
   }
 }

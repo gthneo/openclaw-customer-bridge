@@ -11,7 +11,7 @@ Bridges three identity spaces:
 
 ```bash
 openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.1.0
-openclaw config set channels.customer-bridge --strict-json '{"wecomCorpId":"<corpid>","wecomAgentId":"<agentid>","wecomSecret":"<secret>"}'
+openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-json '{"wecomCorpId":"<corpid>","wecomAgentId":"<agentid>","wecomSecret":"<secret>"}'
 systemctl --user restart openclaw-gateway
 ```
 
