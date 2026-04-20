@@ -27,6 +27,12 @@
         "items": { "type": "string" },
         "default": []
       },
+      "selfUserids": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": [],
+        "description": "Enterprise userids that count as 'you/your team' (group owner check). Empty array = treat all groups as self-owned."
+      },
       "indexRefreshCron": {
         "type": "string",
         "default": "0 * * * *"

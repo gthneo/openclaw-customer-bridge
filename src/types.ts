@@ -6,6 +6,7 @@ export interface CustomerBridgeConfig {
   mergeThresholdAuto?: number;
   mergeThresholdReview?: number;
   vipExternalUserids?: string[];
+  selfUserids?: string[];
   indexRefreshCron?: string;
   wechatMcpServerName?: string;
   wecomCorpId: string;
