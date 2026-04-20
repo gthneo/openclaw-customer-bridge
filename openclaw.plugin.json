@@ -1,0 +1,52 @@
+{
+  "id": "openclaw-customer-bridge",
+  "channels": [],
+  "skills": ["./skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "dbPath": {
+        "type": "string",
+        "default": "~/.openclaw/customer_map.db"
+      },
+      "mergeThresholdAuto": {
+        "type": "number",
+        "default": 0.9,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "mergeThresholdReview": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0,
+        "maximum": 1
+      },
+      "vipExternalUserids": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": []
+      },
+      "indexRefreshCron": {
+        "type": "string",
+        "default": "0 * * * *"
+      },
+      "wechatMcpServerName": {
+        "type": "string",
+        "default": "wechat",
+        "description": "Name of the registered openclaw MCP server that proxies wechat-decrypt"
+      },
+      "wecomCorpId": {
+        "type": "string"
+      },
+      "wecomAgentId": {
+        "type": "string"
+      },
+      "wecomSecret": {
+        "type": "string",
+        "secret": true
+      }
+    },
+    "required": ["wecomCorpId", "wecomAgentId", "wecomSecret"]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "@gthneo/openclaw-customer-bridge-plugin",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin: cross-channel customer identity bridge (WeChat wxid ↔ WeCom external_userid ↔ unionid) + 12-class chat classifier + router skills",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "skills",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "wecom",
+    "wechat",
+    "customer-bridge",
+    "identity-resolution"
+  ],
+  "author": "gthneo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gthneo/openclaw-customer-bridge.git"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.4.0"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.49",
+    "better-sqlite3": "^11.7.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
