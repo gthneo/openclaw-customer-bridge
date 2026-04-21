@@ -10,8 +10,18 @@ Bridges three identity spaces:
 ## Install
 
 ```bash
-openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.1.0
-openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-json '{"wecomCorpId":"<corpid>","wecomAgentId":"<agentid>","wecomSecret":"<secret>"}'
+openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.3.1
+
+# 1. WeCom credentials so refresh_index can hit the corp API
+openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-json \
+  '{"wecomCorpId":"<corpid>","wecomAgentId":"<agentid>","wecomSecret":"<secret>"}'
+
+# 2. CRITICAL: extend tools.allow if it exists (some installs set it to a strict
+# allowlist e.g. ["wecom_mcp"]; without this our customer_* tools won't reach
+# the agent). If tools.allow is unset, you can skip — empty/missing = allow all.
+openclaw config set tools.allow --strict-json \
+  '["wecom_mcp","customer_list","customer_search","customer_show","customer_identify","customer_merge","customer_classify_chat","customer_legacy_history","customer_recent_signals","customer_refresh_index","customer_import_legacy_contacts"]'
+
 systemctl --user restart openclaw-gateway
 ```
 
