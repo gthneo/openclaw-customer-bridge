@@ -15,7 +15,7 @@ const Params = Type.Object({
 
 export function createIdentifyTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.identify",
+    name: "customer_identify",
     label: "客户身份解析",
     description: "Resolve a customer identity (external_userid / wxid / unionid) to a unified primary_id, with confidence and source list.",
     parameters: Params,

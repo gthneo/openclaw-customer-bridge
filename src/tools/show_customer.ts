@@ -14,7 +14,7 @@ function safeParse(raw: string | null | undefined): unknown {
 
 export function createShowCustomerTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.show",
+    name: "customer_show",
     label: "客户详情",
     description: "Return the full customer_map row for a given primary_id, including parsed nickname_set and merged_from history. Returns {found: false} if the primary_id is unknown.",
     parameters: Params,

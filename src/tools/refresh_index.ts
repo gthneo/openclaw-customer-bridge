@@ -8,7 +8,7 @@ const Params = Type.Object({});
 
 export function createRefreshIndexTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.refresh_index",
+    name: "customer_refresh_index",
     label: "群索引刷新",
     description: "Manually trigger a refresh of groupchat_index from WeCom externalcontact/groupchat/* APIs.",
     parameters: Params,

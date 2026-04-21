@@ -10,7 +10,7 @@ const Params = Type.Object({
 
 export function createRecentSignalsTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.recent_signals",
+    name: "customer_recent_signals",
     label: "群信号提取",
     description: "Extract entities/keywords/sentiment signals from recent chat in a group (W3 industry-radar use case).",
     parameters: Params,

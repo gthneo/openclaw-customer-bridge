@@ -9,7 +9,7 @@ const Params = Type.Object({
 
 export function createClassifyChatTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.classify_chat",
+    name: "customer_classify_chat",
     label: "客户会话分类",
     description: "Classify a chat (WeCom internal/external or WeChat legacy) into one of 12 classes (C1/C2/G1-G4/W1-W3/N1-N2/X1).",
     parameters: Params,

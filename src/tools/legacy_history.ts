@@ -12,7 +12,7 @@ const Params = Type.Object({
 
 export function createLegacyHistoryTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.legacy_history",
+    name: "customer_legacy_history",
     label: "历史聊天回溯",
     description: "READ-ONLY pull of historical chat messages for a primary_id from the wechat-decrypt MCP server. Requires wxid_legacy bound to the primary_id. Returns the raw text payload from get_chat_history. Never writes to the source.",
     parameters: Params,

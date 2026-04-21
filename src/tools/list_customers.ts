@@ -59,7 +59,7 @@ function summarize(row: Record<string, unknown>): CustomerRowSummary {
 
 export function createListCustomersTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.list",
+    name: "customer_list",
     label: "客户列表",
     description: "Paginated browse of customer_map. Returns compact rows suitable for display in TUI: primary_id, display_name (remark > nickname > wxid), and identity bridges. Supports filtering by which bridge IDs are populated.",
     parameters: Params,

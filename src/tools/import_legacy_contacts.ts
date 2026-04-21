@@ -20,7 +20,7 @@ interface NicknameSetEnvelope {
 
 export function createImportLegacyContactsTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.import_legacy_contacts",
+    name: "customer_import_legacy_contacts",
     label: "导入历史微信好友",
     description: "READ-ONLY pull from the wechat MCP server (.193 wechat-decrypt) and bulk-upsert into customer_map keyed by wxid_legacy. Skip rows that already have wxid_legacy set; never modifies the source. Returns import counts.",
     parameters: Params,

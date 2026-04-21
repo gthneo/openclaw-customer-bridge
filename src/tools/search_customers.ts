@@ -34,7 +34,7 @@ function decodeNicknameSet(raw: string | null): { nicks: string[]; remark: strin
 
 export function createSearchCustomersTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.search",
+    name: "customer_search",
     label: "客户搜索",
     description: "Search customer_map for a substring across nickname_set (remark + nickname), wxid_legacy, external_userid, unionid. Returns up to `limit` matches with the field that triggered the match.",
     parameters: Params,

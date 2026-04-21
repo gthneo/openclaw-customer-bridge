@@ -17,7 +17,7 @@ const Params = Type.Object({
 
 export function createMergeTool(ctx: PluginContext): AnyAgentTool {
   return {
-    name: "customer.merge",
+    name: "customer_merge",
     label: "客户合并",
     description: "Merge candidate customer rows into one primary_id (after auto-confidence pass or human review).",
     parameters: Params,
