@@ -11,6 +11,7 @@ import { createImportLegacyContactsTool } from "./tools/import_legacy_contacts.j
 import { createListCustomersTool } from "./tools/list_customers.js";
 import { createSearchCustomersTool } from "./tools/search_customers.js";
 import { createShowCustomerTool } from "./tools/show_customer.js";
+import { createHealthTool } from "./tools/health.js";
 import type { CustomerBridgeConfig, PluginContext } from "./types.js";
 
 const plugin = {
@@ -39,6 +40,7 @@ const plugin = {
     api.registerTool(createListCustomersTool(ctx));
     api.registerTool(createSearchCustomersTool(ctx));
     api.registerTool(createShowCustomerTool(ctx));
+    api.registerTool(createHealthTool(ctx));
 
     startIndexRunner(ctx);
   },

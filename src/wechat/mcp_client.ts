@@ -18,6 +18,7 @@ export const WECHAT_MCP_READONLY_TOOLS = new Set<string>([
   "decode_image",
   "get_chat_images",
   "get_date_stats",
+  "health",
 ]);
 
 export interface WechatMcpEndpoint {
