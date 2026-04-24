@@ -38,6 +38,33 @@ customer.legacy_history({
 { "messages": [], "reason": "no wxid_legacy bound to this primary_id" }
 ```
 
+## 输出大小控制
+
+默认参数已为 TUI 优化：
+- `limit=20`（默认）— 比早期的 50 小，避免一次拉爆
+- `format="summary"`（默认）— 每条消息压到 200 字符内，去掉 `[链接]/[链接/文件]` 噪音
+- `max_chars=8000` 硬上限 — 超过会标 `[truncated]`
+
+需要原始内容时显式传：
+
+```
+customer_legacy_history({
+  primary_id: "victormatrix",
+  limit: 5,
+  format: "text"          // 拿到 wechat MCP 完整输出
+})
+```
+
+需要程序化迭代时：
+
+```
+customer_legacy_history({
+  primary_id: "victormatrix",
+  limit: 100,
+  format: "json"          // 返回 messages: [{ts, sender, text}, ...]
+})
+```
+
 ## ⚠️ 边界
 
 - 只读，绝不发消息回个人微信（合规红线）

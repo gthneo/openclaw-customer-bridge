@@ -1,6 +1,6 @@
 {
   "name": "@gthneo/openclaw-customer-bridge-plugin",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "OpenClaw plugin: cross-channel customer identity bridge (WeChat wxid ↔ WeCom external_userid ↔ unionid) + 12-class chat classifier + router skills",
   "type": "module",
   "main": "dist/index.js",
