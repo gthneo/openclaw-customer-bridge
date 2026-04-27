@@ -23,9 +23,8 @@ export function createHealthTool(ctx: PluginContext): AnyAgentTool {
         out.customer_map = { ok: false, reason: e instanceof Error ? e.message : String(e) };
       }
 
-      const cfg = ctx.api.runtime.config.loadConfig();
       const serverName = ctx.config.wechatMcpServerName ?? "wechat";
-      const serverConfig = (cfg.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
+      const serverConfig = (ctx.api.config.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
       if (!serverConfig) {
         out.wechat_mcp = { ok: false, reason: `mcp.servers.${serverName} not configured` };
       } else {

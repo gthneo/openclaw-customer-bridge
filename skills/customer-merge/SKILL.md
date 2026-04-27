@@ -1,41 +1,44 @@
 ---
 name: customer-merge
-description: 把若干 source primary_id 合并到一个 primary_id 下，将 source 行的非空 ID 字段（external_userid / wxid_legacy / unionid / phone_hash）coalesce 进 primary，删除 source 行，并把 source_id 追加到 merged_from 列以便审计回溯。
+description: 把多个重复/分裂的客户记录合并为一条，将各行的身份 ID coalesce 进主记录，删除源行并保留审计轨迹。不可逆。触发词：合并客户 / 这两个是同一个人 / 合并重复记录 / 把这几个人并成一个 / 客户去重 / 手动合并 / merge customers
 ---
 
-# 客户合并技能
+# 客户合并
 
 ## 何时使用
 
-- 收到 `customer.identify` 返回 `sources: ["needs_review"]` 且人工确认是同一人时
-- 通过同主体公众号 unionid 反查后，发现两条历史记录可以打通时
-- 手工运维时，需要把误判的 split 客户合并
+- `customer_identify` 返回 `sources:["needs_review"]`，人工确认是同一人后执行
+- 发现 customer_map 有重复条目（同一客户导入了两次）
+- 通过 unionid 反查确认两条历史记录可以打通
 
 ## 调用
 
 ```
-customer.merge({
-  "primary_id": "wmOgQhDgAA-保留",
+customer_merge({
+  "primary_id": "wmOgQhDgAA-保留这个",
   "source_ids": ["wxid_zhangsan", "pending:1761910000"],
-  "bridge_method": "unionid_strict"
+  "bridge_method": "manual"
 })
 ```
 
-`bridge_method` 可选值：
-- `manual` — 人工合并
-- `phash` — 头像 pHash 高相似
-- `nickname` — 昵称 + 备注名匹配
-- `unionid_strict` — 同主体公众号 unionid 反查（最可信）
-- `phone` — 手机号哈希匹配
+## 参数
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `primary_id` | string | **保留**的主记录 ID |
+| `source_ids` | string[] | **被合并删除**的记录 ID 列表 |
+| `bridge_method` | string | 合并依据（见下表） |
+
+`bridge_method` 取值：`manual` / `phash` / `nickname` / `unionid_strict` / `phone`
 
 ## 返回
 
 ```json
-{ "ok": true, "primary_id": "wmOgQhDgAA-保留", "merged_count": 2 }
+{ "ok": true, "primary_id": "wmOgQhDgAA-保留这个", "merged_count": 2 }
 ```
 
 ## ⚠️ 注意
 
-- 合并是**事务性的且不可逆**（source 行被删除）
-- 必须确保 `bridge_method` 真实反映合并依据；这是审计字段
-- `merged_from` 列保留 source ID 列表，紧急情况可手动还原（但相关 wxid/external_userid 关系已 coalesce 进 primary）
+- **不可逆**：source 行被删除，`merged_from` 列保留 source ID 供审计
+- 合并前务必用 `customer_show` 确认两边 primary_id 正确
+- 合并后原 source_ids 的历史消息可通过新 primary_id 查询

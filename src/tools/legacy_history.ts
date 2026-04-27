@@ -33,9 +33,8 @@ export function createLegacyHistoryTool(ctx: PluginContext): AnyAgentTool {
       if (!row?.wxid_legacy) {
         return jsonResult({ ok: false, messages_text: "", reason: "no wxid_legacy bound to this primary_id" });
       }
-      const cfg = ctx.api.runtime.config.loadConfig();
       const serverName = ctx.config.wechatMcpServerName ?? "wechat";
-      const serverConfig = (cfg.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
+      const serverConfig = (ctx.api.config.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
       if (!serverConfig) {
         return jsonResult({ ok: false, messages_text: "", reason: `mcp.servers.${serverName} not configured` });
       }

@@ -1,26 +1,29 @@
 ---
 name: customer-identify
-description: 把 external_userid / wxid / unionid / 头像 phash / 昵称等任意识别信号解析为统一的 primary_id，返回 confidence 与匹配证据。强 ID 命中 confidence=1；仅软信号时走概率匹配，confidence < auto 阈值时返回 needs_review。
+description: 把任意识别信号（企微 external_userid / 微信 wxid / unionid / 头像 / 昵称）解析为统一 primary_id，判断是否同一人，返回置信度。触发词：这个人是谁 / 识别客户 / 查一下这个 external_userid / 这个 wxid 是哪个客户 / 判断是不是同一人 / 打通身份 / identify customer
 ---
 
-# 客户身份解析技能
+# 客户身份解析
 
 ## 何时使用
 
-- 收到 WeCom `external_contact_add` 事件时，用 `external_userid` 调用以获取（或新建）`primary_id`
-- 想对一个 wxid 与 external_userid 是否同一人做判断时（结果可能是 `merged: true` 或 `needs_review`）
+- 收到 WeCom `external_contact_add` 事件，查是否已有记录
+- 想判断某个微信 wxid 和企微 external_userid 是不是同一人
+- 导入数据后把新信号关联到已有客户
 
 ## 调用
 
 ```
-customer.identify({
-  "external_userid": "wmOgQhDgAAj...",
+customer_identify({
+  "external_userid": "wmOgQhDgAAj...",   // 任选其一或组合
+  "wxid": "wxid_zhangsan",
+  "unionid": "oXXXX",
   "nicknames": ["张三", "三哥"],
   "avatar_phash": "f8c1a5..."
 })
 ```
 
-任意字段都可缺失，至少给一个信号。
+至少给一个信号，其余可缺省。
 
 ## 返回
 
@@ -34,13 +37,9 @@ customer.identify({
 }
 ```
 
-`sources` 可能取值：
-- `external_userid` / `wxid` / `unionid` — 强 ID 命中，confidence=1
-- `auto_match` — 概率匹配 ≥ mergeThresholdAuto，自动合并
-- `needs_review` — 概率匹配在 review/auto 之间，需要人工确认（应进入复核队列）
-- `new` — 视为新客户已落库
-
-## 后续动作
-
-- `merged: true` 但 `confidence < 1` → 写一条 audit log，便于事后回溯
-- `sources: ["needs_review"]` → 调用 `customer.merge` 之前必须有人工确认
+| `sources` 值 | 含义 |
+|---|---|
+| `external_userid` / `wxid` / `unionid` | 强 ID 直接命中，confidence=1 |
+| `auto_match` | 概率 ≥ mergeThresholdAuto，已自动合并 |
+| `needs_review` | 概率在 review/auto 之间，**需人工确认**后再调 `customer_merge` |
+| `new` | 新客户，已落库 |

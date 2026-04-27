@@ -25,9 +25,8 @@ export function createImportLegacyContactsTool(ctx: PluginContext): AnyAgentTool
     description: "READ-ONLY pull from the wechat MCP server (.193 wechat-decrypt) and bulk-upsert into customer_map keyed by wxid_legacy. Skip rows that already have wxid_legacy set; never modifies the source. Returns import counts.",
     parameters: Params,
     async execute(_toolCallId: string, params: Static<typeof Params>) {
-      const cfg = ctx.api.runtime.config.loadConfig();
       const serverName = ctx.config.wechatMcpServerName ?? "wechat";
-      const serverConfig = (cfg.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
+      const serverConfig = (ctx.api.config.mcp as { servers?: Record<string, unknown> } | undefined)?.servers?.[serverName];
       if (!serverConfig) {
         return jsonResult({ ok: false, reason: `mcp.servers.${serverName} not configured` });
       }

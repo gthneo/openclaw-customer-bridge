@@ -24,9 +24,7 @@ const plugin = {
     properties: {},
   },
   register(api: OpenClawPluginApi): void {
-    const cfg = api.runtime.config.loadConfig();
-    const entries = (cfg.plugins as { entries?: Record<string, { config?: unknown }> } | undefined)?.entries;
-    const config = (entries?.["openclaw-customer-bridge"]?.config ?? {}) as CustomerBridgeConfig;
+    const config = (api.pluginConfig ?? {}) as unknown as CustomerBridgeConfig;
     const db = openCustomerMapDb(resolveDbPath(config.dbPath));
     const ctx: PluginContext = { api, config, db };
 
