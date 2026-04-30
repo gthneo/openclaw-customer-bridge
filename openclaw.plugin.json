@@ -54,6 +54,16 @@
         "type": "string",
         "secret": true,
         "description": "Self-built application secret"
+      },
+      "ingestAuthToken": {
+        "type": "string",
+        "secret": true,
+        "description": "Bearer token shared with powerdata.notify_filter for the wechat ingest webhook. When set, plugin registers POST /plugins/openclaw-customer-bridge/ingest. Leave unset to disable the ingest route."
+      },
+      "ingestDefaultAgentId": {
+        "type": "string",
+        "default": "main",
+        "description": "Default agent id for ingest-created sessions. Future: route per chat_id via lookup table."
       }
     }
   }

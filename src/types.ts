@@ -12,6 +12,17 @@ export interface CustomerBridgeConfig {
   wecomCorpId: string;
   wecomAgentId: string;
   wecomSecret: string;
+  /**
+   * Bearer token shared with powerdata.notify_filter for the ingest webhook
+   * endpoint. When not set, the ingest route is NOT registered (graceful
+   * degrade — older deployments that don't run powerdata aren't broken).
+   */
+  ingestAuthToken?: string;
+  /**
+   * Default agent id for ingest-created sessions. Defaults to "main" when
+   * not set. Future: route per chat_id via lookup table.
+   */
+  ingestDefaultAgentId?: string;
 }
 
 export interface PluginContext {

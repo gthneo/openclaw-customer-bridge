@@ -12,6 +12,7 @@ import { createListCustomersTool } from "./tools/list_customers.js";
 import { createSearchCustomersTool } from "./tools/search_customers.js";
 import { createShowCustomerTool } from "./tools/show_customer.js";
 import { createHealthTool } from "./tools/health.js";
+import { registerIngestRoute } from "./ingest/route.js";
 import type { CustomerBridgeConfig, PluginContext } from "./types.js";
 
 const plugin = {
@@ -41,6 +42,19 @@ const plugin = {
     api.registerTool(createHealthTool(ctx));
 
     startIndexRunner(ctx);
+
+    // Register ingest webhook route (POST /plugins/openclaw-customer-bridge/ingest).
+    // Powerdata.notify_filter on the WeChat-host side calls this when a wechat
+    // message matches its filter rules; the result lands in OpenClaw sessions
+    // and surfaces in GeniusClaw ▾ 算料.
+    if (config.ingestAuthToken) {
+      registerIngestRoute({
+        api,
+        db,
+        agentId: config.ingestDefaultAgentId ?? "main",
+        authToken: config.ingestAuthToken,
+      });
+    }
   },
 };
 
