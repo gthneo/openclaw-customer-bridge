@@ -51,4 +51,20 @@ CREATE TABLE IF NOT EXISTS schema_version (
 );
 
 INSERT OR IGNORE INTO schema_version (version, applied_at) VALUES (1, strftime('%s','now'));
+
+-- v2 (2026-04-30): ingest_log for the wechat-message ingest channel.
+-- Tracks events POSTed by powerdata.notify_filter so we can dedupe
+-- on event_id (powerdata is at-least-once delivery).
+CREATE TABLE IF NOT EXISTS ingest_log (
+  event_id      TEXT PRIMARY KEY,
+  primary_id    TEXT NOT NULL,
+  session_key   TEXT NOT NULL,
+  message_id    TEXT,
+  status        TEXT NOT NULL DEFAULT 'ok',      -- ok | dropped | error
+  error_message TEXT,
+  ingested_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ingest_session ON ingest_log(session_key);
+CREATE INDEX IF NOT EXISTS idx_ingest_time ON ingest_log(ingested_at);
+INSERT OR IGNORE INTO schema_version (version, applied_at) VALUES (2, strftime('%s','now'));
 `;
