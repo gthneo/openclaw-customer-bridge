@@ -59,6 +59,32 @@ export function createRealRpcClient(opts: CreateRealRpcClientOpts): OpenClawRpcC
           entry.updatedAt = now;
         }
 
+        // Populate the inventory metadata gateway sessions.list filters by.
+        // Idempotent: backfills missing fields on entries created by older
+        // versions of this code (which only wrote sessionId + updatedAt).
+        if (args.meta) {
+          const m = args.meta;
+          if (!entry.channel) entry.channel = m.channel;
+          if (!entry.chatType) entry.chatType = m.chatType;
+          if (!entry.displayName) {
+            entry.displayName = m.chatName || `${m.channel}:${m.chatId}`;
+          }
+          if (!entry.origin) {
+            entry.origin = {
+              label: m.chatName || m.chatId,
+              provider: m.channel,
+              surface: m.channel,
+              chatType: m.chatType,
+              from: m.chatId,
+              to: m.chatId,
+              accountId: agentId,
+            };
+          }
+          if (!entry.lastChannel) entry.lastChannel = m.channel;
+          if (!entry.lastTo) entry.lastTo = m.chatId;
+          if (!entry.lastAccountId) entry.lastAccountId = agentId;
+        }
+
         const sessionFile = session.resolveSessionFilePath(entry.sessionId, entry, { agentId });
         await ensureTranscriptHeader(sessionFile, entry.sessionId);
 

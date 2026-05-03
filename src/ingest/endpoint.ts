@@ -39,9 +39,24 @@ export type IngestResponse =
  * client; tests inject a stub. Returning a discriminated `{ok, ...}` shape
  * (rather than throwing) lets handleIngest distinguish gateway errors from
  * auth/schema errors uniformly.
+ *
+ * `meta` carries the channel + chat shape so the SessionEntry created in
+ * the inventory has the fields gateway sessions.list filters by (channel,
+ * chatType, displayName, origin). Without these, sessions.list silently
+ * skips the entry even though chat.history can still read its transcript.
  */
 export interface OpenClawRpcClient {
-  chatInject(args: { sessionKey: string; message: string; label?: string }):
+  chatInject(args: {
+    sessionKey: string;
+    message: string;
+    label?: string;
+    meta?: {
+      channel: string;            // e.g. "openclaw-weixin"
+      chatType: "single" | "group";
+      chatId: string;             // wxid for DM, <id>@chatroom for group
+      chatName?: string;          // display name for the chat (group name / contact name)
+    };
+  }):
     Promise<{ ok: true; messageId: string } | { ok: false; error: string }>;
   /** Optional — not called in v1 (chat.inject creates session if missing per OpenClaw audit). */
   sessionsCreate?(args: { key?: string; agentId?: string }):
@@ -152,12 +167,21 @@ export async function handleIngest(
   // 5. resolve sessionKey
   const sessionKey = resolveSessionKey({ agentId: deps.agentId, chat_id: req.chat_id });
 
-  // 6. inject the wrapped message
+  // 6. inject the wrapped message — pass chat metadata so the SessionEntry
+  // created in the gateway inventory has channel/chatType/displayName populated.
+  // Without this, sessions.list filters out our entries even though chat.history
+  // can read the transcript.
   const wrapped = wrapMessageEnvelope(req);
   const injectRes = await deps.rpc.chatInject({
     sessionKey,
     message: wrapped,
     label: req.trigger_reason,
+    meta: {
+      channel: "openclaw-weixin",
+      chatType: req.chat_type,
+      chatId: req.chat_id,
+      chatName: req.chat_name,
+    },
   });
   if (!injectRes.ok) {
     recordIngestLog(deps.db, {

@@ -103,6 +103,104 @@ test('real_rpc: appends to existing transcript with parentId chained to previous
   }
 });
 
+test('real_rpc: populates SessionEntry inventory metadata when meta is provided (group)', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'cb-rpc-'));
+  try {
+    const { api, store } = makeFakeApi(tmp);
+    const rpc = createRealRpcClient({ api: api as never, agentId: 'main' });
+    const sessionKey = 'agent:main:openclaw-weixin:chat:gabc@chatroom';
+
+    await rpc.chatInject({
+      sessionKey,
+      message: '[微信] Alice: hi',
+      meta: {
+        channel: 'openclaw-weixin',
+        chatType: 'group',
+        chatId: 'gabc@chatroom',
+        chatName: '客户群A',
+      },
+    });
+
+    const e = store[sessionKey];
+    assert.equal(e.channel, 'openclaw-weixin');
+    assert.equal(e.chatType, 'group');
+    assert.equal(e.displayName, '客户群A');
+    assert.equal(e.lastChannel, 'openclaw-weixin');
+    assert.equal(e.lastTo, 'gabc@chatroom');
+    assert.equal(e.lastAccountId, 'main');
+    const origin = e.origin as Record<string, string>;
+    assert.equal(origin.provider, 'openclaw-weixin');
+    assert.equal(origin.chatType, 'group');
+    assert.equal(origin.label, '客户群A');
+    assert.equal(origin.from, 'gabc@chatroom');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('real_rpc: populates SessionEntry inventory metadata for DM (single)', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'cb-rpc-'));
+  try {
+    const { api, store } = makeFakeApi(tmp);
+    const rpc = createRealRpcClient({ api: api as never, agentId: 'main' });
+    const sessionKey = 'agent:main:openclaw-weixin:chat:wxid_alice';
+
+    await rpc.chatInject({
+      sessionKey,
+      message: '[微信] Alice: hi',
+      meta: {
+        channel: 'openclaw-weixin',
+        chatType: 'single',
+        chatId: 'wxid_alice',
+        // chatName intentionally absent (no contact-name resolution path here)
+      },
+    });
+
+    const e = store[sessionKey];
+    assert.equal(e.chatType, 'single');
+    // No chatName → fallback to channel:chatId
+    assert.equal(e.displayName, 'openclaw-weixin:wxid_alice');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('real_rpc: backfills missing metadata on existing entry without overwriting filled fields', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'cb-rpc-'));
+  try {
+    const { api, store } = makeFakeApi(tmp);
+    const sessionKey = 'agent:main:openclaw-weixin:chat:legacy@chatroom';
+    // simulate an entry created by an older code path (sessionId + updatedAt only)
+    store[sessionKey] = {
+      sessionId: 'legacy-uuid',
+      updatedAt: 1700000000000,
+      // user-edited displayName we must not overwrite
+      displayName: '用户已起好的名字',
+    };
+
+    const rpc = createRealRpcClient({ api: api as never, agentId: 'main' });
+    await rpc.chatInject({
+      sessionKey,
+      message: 'second turn',
+      meta: {
+        channel: 'openclaw-weixin',
+        chatType: 'group',
+        chatId: 'legacy@chatroom',
+        chatName: 'should-not-overwrite',
+      },
+    });
+
+    const e = store[sessionKey];
+    // Backfilled
+    assert.equal(e.channel, 'openclaw-weixin');
+    assert.equal(e.chatType, 'group');
+    // Preserved (user-edited displayName wins over backfill)
+    assert.equal(e.displayName, '用户已起好的名字');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
 test('real_rpc: returns ok=false when runtime helper throws', async () => {
   const { api } = makeFakeApi('/tmp');
   // Force loadSessionStore to throw — covers the catch-all error path
