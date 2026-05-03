@@ -1,8 +1,9 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/core";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleIngest, type IngestDeps, type IngestResponse, type OpenClawRpcClient, type IdentifierResolver } from "./endpoint.js";
+import { createRealRpcClient } from "./real_rpc_client.js";
 import type Database from "better-sqlite3";
-import { findByExternalUserid, findByWxid, upsertCustomer } from "../customer_map/repository.js";
+import { findByWxid, upsertCustomer } from "../customer_map/repository.js";
 
 /**
  * Wire `handleIngest` into OpenClaw's HTTP route system, so powerdata can
@@ -35,16 +36,11 @@ function defaultIdentifyCustomer(db: Database.Database): IdentifierResolver {
 }
 
 /**
- * Stub RPC client — v1 returns success with a synthetic messageId without
- * actually invoking OpenClaw's chat.inject. Enables wire-level e2e (powerdata
- * POST → endpoint → 200 + ingest_log row written) before the real chat.inject
- * integration is in place.
- *
- * TODO(next): replace with a real OpenClaw RPC client. Needs investigating
- * whether plugin-runtime exposes an in-process gateway client, or if we
- * need to reach out via the plugin's own HTTP loopback.
+ * Stub RPC client — keeps wire-level e2e fast (no transcript file IO) when
+ * `config.ingestStubMode === true`. Returns a synthetic messageId so the
+ * dedup table still records the call. Production path is `createRealRpcClient`.
  */
-function stubRpcClient(): OpenClawRpcClient {
+export function stubRpcClient(): OpenClawRpcClient {
   return {
     chatInject: async (args) => {
       const messageId = `stub_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
@@ -72,6 +68,8 @@ export interface RegisterIngestRouteOpts {
   db: Database.Database;
   agentId: string;
   authToken: string;
+  /** When true, skip real transcript injection (use stubRpcClient). Tests + e2e wire-only. */
+  stubMode?: boolean;
   /** Optional override — production wires real OpenClaw chat.inject here. */
   rpc?: OpenClawRpcClient;
   /** Optional override — defaults to wxid-keyed customer lookup. */
@@ -84,9 +82,14 @@ export function registerIngestRoute(opts: RegisterIngestRouteOpts): void {
     return;
   }
 
+  const rpc = opts.rpc ??
+    (opts.stubMode
+      ? stubRpcClient()
+      : createRealRpcClient({ api: opts.api, agentId: opts.agentId }));
+
   const deps: IngestDeps = {
     db: opts.db,
-    rpc: opts.rpc ?? stubRpcClient(),
+    rpc,
     identifyCustomer: opts.identifyCustomer ?? defaultIdentifyCustomer(opts.db),
     agentId: opts.agentId,
     authToken: opts.authToken,
@@ -127,5 +130,8 @@ export function registerIngestRoute(opts: RegisterIngestRouteOpts): void {
     },
   });
 
-  console.log(`[customer-bridge] ingest route registered at POST ${INGEST_PATH}`);
+  console.log(
+    `[customer-bridge] ingest route registered at POST ${INGEST_PATH}` +
+      ` (mode=${opts.stubMode ? "stub" : "real-transcript-write"}, agentId=${opts.agentId})`
+  );
 }

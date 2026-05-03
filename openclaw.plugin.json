@@ -64,6 +64,11 @@
         "type": "string",
         "default": "main",
         "description": "Default agent id for ingest-created sessions. Future: route per chat_id via lookup table."
+      },
+      "ingestStubMode": {
+        "type": "boolean",
+        "default": false,
+        "description": "When true the ingest endpoint logs but does not write to the OpenClaw session transcript. Useful for wire-level e2e tests without polluting real session history."
       }
     }
   }

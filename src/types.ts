@@ -23,6 +23,12 @@ export interface CustomerBridgeConfig {
    * not set. Future: route per chat_id via lookup table.
    */
   ingestDefaultAgentId?: string;
+  /**
+   * When true, the ingest endpoint logs but does not actually write to the
+   * OpenClaw session transcript — useful for wire-level e2e without polluting
+   * a real agent's session history. Defaults to false (real injection).
+   */
+  ingestStubMode?: boolean;
 }
 
 export interface PluginContext {

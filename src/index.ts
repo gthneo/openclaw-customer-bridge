@@ -53,6 +53,7 @@ const plugin = {
         db,
         agentId: config.ingestDefaultAgentId ?? "main",
         authToken: config.ingestAuthToken,
+        stubMode: config.ingestStubMode === true,
       });
     }
   },
