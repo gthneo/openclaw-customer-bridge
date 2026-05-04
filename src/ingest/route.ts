@@ -93,6 +93,9 @@ export function registerIngestRoute(opts: RegisterIngestRouteOpts): void {
     identifyCustomer: opts.identifyCustomer ?? defaultIdentifyCustomer(opts.db),
     agentId: opts.agentId,
     authToken: opts.authToken,
+    mode: opts.stubMode ? "stub" : "real",
+    // logger defaults to consoleIngestLogger inside handleIngest;
+    // route doesn't override it.
   };
 
   opts.api.registerHttpRoute({

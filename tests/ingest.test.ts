@@ -9,6 +9,7 @@ import {
   wrapMessageEnvelope,
   type IngestDeps,
   type IngestRequest,
+  type IngestLogger,
   type OpenClawRpcClient,
   type IdentifierResolver,
 } from '../src/ingest/endpoint.ts';
@@ -271,4 +272,119 @@ test('ingest_log: schema migration applied on db open (v2 marker)', () => {
   const db = makeTestDb();
   const versions = db.prepare("SELECT version FROM schema_version ORDER BY version").all() as { version: number }[];
   assert.deepEqual(versions.map((v) => v.version), [1, 2]);
+});
+
+// ---- per-request observability log ---------------------------------------
+
+interface CapturedLogger extends IngestLogger {
+  okCalls: Parameters<IngestLogger['ok']>[0][];
+  dedupHitCalls: Parameters<IngestLogger['dedupHit']>[0][];
+  failCalls: Parameters<IngestLogger['fail']>[0][];
+  suspiciousCalls: Parameters<IngestLogger['suspicious']>[0][];
+}
+
+function makeCapturedLogger(): CapturedLogger {
+  const okCalls: Parameters<IngestLogger['ok']>[0][] = [];
+  const dedupHitCalls: Parameters<IngestLogger['dedupHit']>[0][] = [];
+  const failCalls: Parameters<IngestLogger['fail']>[0][] = [];
+  const suspiciousCalls: Parameters<IngestLogger['suspicious']>[0][] = [];
+  return {
+    ok: (i) => { okCalls.push(i); },
+    dedupHit: (i) => { dedupHitCalls.push(i); },
+    fail: (i) => { failCalls.push(i); },
+    suspicious: (i) => { suspiciousCalls.push(i); },
+    okCalls, dedupHitCalls, failCalls, suspiciousCalls,
+  };
+}
+
+test('logger: ok path emits inject ok with mode + sender_nickname + bytes', async () => {
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps(), mode: 'real' as const, logger };
+  const r = await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());
+  assert.equal(r.ok, true);
+  assert.equal(logger.okCalls.length, 1);
+  const got = logger.okCalls[0]!;
+  assert.equal(got.mode, 'real');
+  assert.equal(got.session_key, 'agent:main:openclaw-weixin:chat:12345@chatroom');
+  assert.equal(got.message_id, 'msg_returned_001');
+  assert.equal(got.trigger, 'kw:合同');
+  assert.equal(got.sender_nickname, 'Alice');
+  assert.ok(got.bytes > 0, 'bytes must be set');
+  assert.equal(logger.failCalls.length, 0);
+  assert.equal(logger.suspiciousCalls.length, 0);
+});
+
+test('logger: dedup-hit path emits dedupHit and NOT ok again', async () => {
+  const db = makeTestDb();
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps({ db }), mode: 'stub' as const, logger };
+  // first call → ok
+  await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());
+  assert.equal(logger.okCalls.length, 1);
+  // second identical call → dedup short-circuit
+  const r2 = await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());
+  assert.equal(r2.ok, true);
+  assert.equal(logger.dedupHitCalls.length, 1);
+  assert.equal(logger.dedupHitCalls[0]!.event_id, '01HX_EVENT_001');
+  assert.equal(logger.okCalls.length, 1, 'ok must not fire again on dedup hit');
+});
+
+test('logger: fail path emits inject FAIL warn with mode + error', async () => {
+  const rpc: OpenClawRpcClient = {
+    chatInject: async () => ({ ok: false, error: 'transient gateway hiccup' }),
+  };
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps({ rpc }), mode: 'real' as const, logger };
+  const r = await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());
+  assert.equal(r.ok, false);
+  assert.equal(logger.failCalls.length, 1);
+  assert.equal(logger.failCalls[0]!.mode, 'real');
+  assert.equal(logger.failCalls[0]!.event_id, '01HX_EVENT_001');
+  assert.match(logger.failCalls[0]!.error, /transient gateway hiccup/);
+  assert.equal(logger.okCalls.length, 0);
+});
+
+test('logger: suspicious warn fires when sender_nickname == chat_id', async () => {
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps(), logger };
+  const body = validBody({ sender_nickname: '12345@chatroom' });   // == chat_id
+  await handleIngest(deps, `Bearer ${VALID_TOKEN}`, body);
+  assert.equal(logger.suspiciousCalls.length, 1);
+  assert.match(logger.suspiciousCalls[0]!.reason, /sender_nickname == chat_id/);
+  // request still completes (warn only, no reject)
+  assert.equal(logger.okCalls.length, 1);
+});
+
+test('logger: suspicious warn fires when sender_nickname == chat_name in group', async () => {
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps(), logger };
+  const body = validBody({ sender_nickname: '客户群A', chat_name: '客户群A', chat_type: 'group' });
+  await handleIngest(deps, `Bearer ${VALID_TOKEN}`, body);
+  assert.equal(logger.suspiciousCalls.length, 1);
+  assert.match(logger.suspiciousCalls[0]!.reason, /sender_nickname == chat_name in group/);
+  // request still completes
+  assert.equal(logger.okCalls.length, 1);
+});
+
+test('logger: clean payload emits NO suspicious warn', async () => {
+  const logger = makeCapturedLogger();
+  const deps = { ...makeDeps(), logger };
+  await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());   // sender=Alice, chat=12345@chatroom
+  assert.equal(logger.suspiciousCalls.length, 0);
+  assert.equal(logger.okCalls.length, 1);
+});
+
+test('logger: defaults to consoleIngestLogger when not injected (smoke — no throws)', async () => {
+  const deps = makeDeps();
+  // Spy on console.log to ensure something gets emitted
+  const original = console.log;
+  let captured = '';
+  console.log = (msg: unknown) => { captured += String(msg); };
+  try {
+    await handleIngest(deps, `Bearer ${VALID_TOKEN}`, validBody());
+  } finally {
+    console.log = original;
+  }
+  assert.match(captured, /\[customer-bridge\] inject ok/);
+  assert.match(captured, /sender_nickname=/);
 });
