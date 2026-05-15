@@ -124,6 +124,18 @@ to the bundle. Verify with `grep 'from "openclaw' dist/index.js` (should match).
 
 ## Changelog
 
+- **0.3.6** — ingest route registration moved out of `register()` and into
+  a deferred `api.registerService({ id, start })` callback so it fires from
+  `startPluginServices()` — the same lifecycle slot
+  `startChannels()` uses for wecom / googlechat / bluebubbles / zalo
+  webhook routes. The gateway calls `pinActivePluginHttpRouteRegistry()`
+  **before** that slot, so routes registered there land on the pinned
+  active runtime registry that the HTTP server actually reads at request
+  time. The previous flow (0.3.5) wrote the route from `register()`,
+  which runs **before** `setActivePluginRegistry()` swaps the registry —
+  so the route ended up on an orphan pre-pin registry and 404'd even
+  though the register call itself succeeded. Diagnosed on thfs .140
+  2026-05-15.
 - **0.3.5** — ingest HTTP route now registers via `registerPluginHttpRoute`
   from `openclaw/plugin-sdk/webhook-targets` (dynamic / active-registry
   path used by all channel-style plugins), replacing the previous

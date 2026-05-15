@@ -47,13 +47,28 @@ const plugin = {
     // Powerdata.notify_filter on the WeChat-host side calls this when a wechat
     // message matches its filter rules; the result lands in OpenClaw sessions
     // and surfaces in GeniusClaw ▾ 算料.
+    //
+    // Deferred to service.start() — fires AFTER gateway calls
+    // pinActivePluginHttpRouteRegistry() and AFTER startChannels(). The
+    // load-time registry that register() writes to gets replaced by
+    // setActivePluginRegistry(), so a registerPluginHttpRoute call from
+    // register() body lands on an orphan pre-pin registry and 404s at
+    // request time. All channel-style plugins (wecom, googlechat,
+    // bluebubbles, zalo) register their webhook routes from
+    // startChannels-driven code — service.start() runs in the same
+    // lifecycle slot. Diagnosed on thfs .140 2026-05-15.
     if (config.ingestAuthToken) {
-      registerIngestRoute({
-        api,
-        db,
-        agentId: config.ingestDefaultAgentId ?? "main",
-        authToken: config.ingestAuthToken,
-        stubMode: config.ingestStubMode === true,
+      api.registerService({
+        id: "customer-bridge-ingest-route",
+        start: () => {
+          registerIngestRoute({
+            api,
+            db,
+            agentId: config.ingestDefaultAgentId ?? "main",
+            authToken: config.ingestAuthToken!,
+            stubMode: config.ingestStubMode === true,
+          });
+        },
       });
     }
   },
