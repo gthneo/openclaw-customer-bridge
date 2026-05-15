@@ -7,10 +7,17 @@ Bridges three identity spaces:
 - `external_userid` (WeCom external contact)
 - `unionid` (WeChat Open Platform, when same-subject OA is bound)
 
+## Requirements
+
+- OpenClaw `>=2026.4.0`. On `2026.5.4+` the plugin declares `contracts.tools`
+  (required by the new manifest gate) and ships a bundled `dist/index.js`
+  with `openclaw` / `better-sqlite3` left external so the host's ESM
+  resolver finds them.
+
 ## Install
 
 ```bash
-openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.3.1
+openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.3.4
 
 # 1. WeCom credentials so refresh_index can hit the corp API
 openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-json \
@@ -20,21 +27,25 @@ openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-jso
 # allowlist e.g. ["wecom_mcp"]; without this our customer_* tools won't reach
 # the agent). If tools.allow is unset, you can skip — empty/missing = allow all.
 openclaw config set tools.allow --strict-json \
-  '["wecom_mcp","customer_list","customer_search","customer_show","customer_identify","customer_merge","customer_classify_chat","customer_legacy_history","customer_recent_signals","customer_refresh_index","customer_import_legacy_contacts"]'
+  '["wecom_mcp","customer_list","customer_search","customer_show","customer_identify","customer_merge","customer_classify_chat","customer_legacy_history","customer_recent_signals","customer_refresh_index","customer_import_legacy_contacts","customer_health"]'
 
 systemctl --user restart openclaw-gateway
+openclaw plugins doctor   # expect 0 errors
 ```
 
 ## Tools registered
 
 | Tool name | Purpose |
 |---|---|
-| `customer.classify_chat` | classify a chat into one of 12 classes (C1/C2/G1-G4/W1-W3/N1-N2/X1) |
-| `customer.identify` | resolve `external_userid`/`wxid` → unified `primary_id` with confidence |
-| `customer.merge` | merge candidate IDs after human or auto confirmation |
-| `customer.legacy_history` | retrieve chat history from wechat-decrypt for a `primary_id` |
-| `customer.recent_signals` | extract entities/keywords from recent chat for a group |
-| `customer.refresh_index` | cron-driven groupchat_index refresh from WeCom API |
+| `customer_classify_chat` | classify a chat into one of 12 classes (C1/C2/G1-G4/W1-W3/N1-N2/X1) |
+| `customer_identify` | resolve `external_userid`/`wxid` → unified `primary_id` with confidence |
+| `customer_merge` | merge candidate IDs after human or auto confirmation |
+| `customer_legacy_history` | retrieve chat history from wechat-decrypt for a `primary_id` |
+| `customer_recent_signals` | extract entities/keywords from recent chat for a group |
+| `customer_refresh_index` | cron-driven groupchat_index refresh from WeCom API |
+| `customer_import_legacy_contacts` | import legacy WeChat contacts via the wechat MCP server |
+| `customer_list` / `customer_search` / `customer_show` | read-side queries against `customer_map.db` |
+| `customer_health` | self-check (db reachable, schema version, wechat MCP probe) |
 
 ## Storage
 
@@ -97,6 +108,27 @@ Tail live ingest activity on a host:
 journalctl --user -u openclaw-gateway -f | grep -E '\[customer-bridge\] inject|\[customer-bridge\] suspicious'
 ```
 
-## Status
+## Build
 
-**Scaffold only.** All tool handlers are stubs. Business logic to be filled in iteratively.
+```bash
+npm install
+npm run build       # esbuild bundle (externals: openclaw, better-sqlite3, sharp,
+                    # @modelcontextprotocol/sdk, @sinclair/typebox, eventsource)
+npm run typecheck   # tsc --noEmit
+npm test            # node --import tsx --test tests/*.test.ts
+```
+
+`dist/index.js` is a single ESM bundle. `import "openclaw"` and `import "better-sqlite3"`
+are preserved so the OpenClaw host resolves them at load time — do **not** add them
+to the bundle. Verify with `grep 'from "openclaw' dist/index.js` (should match).
+
+## Changelog
+
+- **0.3.4** — esbuild bundle with `--external:openclaw --external:better-sqlite3`;
+  added `contracts.tools` to `openclaw.plugin.json` for OC `2026.5.4+` manifest gate.
+  Fixes `ERR_MODULE_NOT_FOUND: Cannot find package 'openclaw'` and
+  `plugin must declare contracts.tools before registering agent tools` on
+  OpenClaw `2026.5.7`.
+- **0.3.3** — `legacy_history` adds `summary`/`json` formats + size cap.
+- **0.3.2** — fix `legacy_history` schema; add `customer_health` probe.
+- **0.3.1** — rename `customer.*` tools to `customer_*` (LLM tool-name compat).

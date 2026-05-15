@@ -2,6 +2,21 @@
   "id": "openclaw-customer-bridge",
   "channels": [],
   "skills": ["./skills"],
+  "contracts": {
+    "tools": [
+      "customer_classify_chat",
+      "customer_identify",
+      "customer_merge",
+      "customer_legacy_history",
+      "customer_recent_signals",
+      "customer_refresh_index",
+      "customer_import_legacy_contacts",
+      "customer_list",
+      "customer_search",
+      "customer_show",
+      "customer_health"
+    ]
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
