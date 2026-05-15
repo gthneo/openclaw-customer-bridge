@@ -17,16 +17,16 @@ Bridges three identity spaces:
 ## Install
 
 ```bash
-openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.3.4
+openclaw plugins install github:gthneo/openclaw-customer-bridge#v0.3.7
 
 # 1. WeCom credentials so refresh_index can hit the corp API
 openclaw config set plugins.entries.openclaw-customer-bridge.config --strict-json \
   '{"wecomCorpId":"<corpid>","wecomAgentId":"<agentid>","wecomSecret":"<secret>"}'
 
-# 2. CRITICAL: extend tools.allow if it exists (some installs set it to a strict
-# allowlist e.g. ["wecom_mcp"]; without this our customer_* tools won't reach
-# the agent). If tools.allow is unset, you can skip — empty/missing = allow all.
-openclaw config set tools.allow --strict-json \
+# 2. Let customer_* tools reach the agent without replacing the normal tool
+# profile. If your install intentionally uses a strict tools.allow list, include
+# these same names there instead.
+openclaw config set tools.alsoAllow --strict-json \
   '["wecom_mcp","customer_list","customer_search","customer_show","customer_identify","customer_merge","customer_classify_chat","customer_legacy_history","customer_recent_signals","customer_refresh_index","customer_import_legacy_contacts","customer_health"]'
 
 systemctl --user restart openclaw-gateway
@@ -46,6 +46,27 @@ openclaw plugins doctor   # expect 0 errors
 | `customer_import_legacy_contacts` | import legacy WeChat contacts via the wechat MCP server |
 | `customer_list` / `customer_search` / `customer_show` | read-side queries against `customer_map.db` |
 | `customer_health` | self-check (db reachable, schema version, wechat MCP probe) |
+
+## Optional public X/Twitter signals with TweetClaw
+
+Customer Bridge should stay the source of truth for private WeChat/WeCom
+identity, chat history, and group signals. If the same OpenClaw workspace also
+needs public X/Twitter context, install TweetClaw as a separate plugin:
+
+```bash
+openclaw plugins install @xquik/tweetclaw
+openclaw config set plugins.entries.tweetclaw.config.apiKey "$XQUIK_API_KEY"
+openclaw config set tools.alsoAllow --strict-json \
+  '["explore","tweetclaw","customer_list","customer_search","customer_show","customer_recent_signals"]'
+```
+
+Use TweetClaw to search tweets, search tweet replies, export followers, look up
+users, monitor tweets, receive webhooks, or draft post tweets and post tweet
+replies for human approval. Keep public X/Twitter evidence separate from private
+`customer_map` rows unless a human maps the account to a known customer. Store
+only source URLs, tweet IDs, timestamps, concise summaries, and follow-up
+decisions in handoff notes. Do not store API keys, cookies, DMs, or raw timeline
+exports in Customer Bridge storage.
 
 ## Storage
 
