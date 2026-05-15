@@ -124,6 +124,13 @@ to the bundle. Verify with `grep 'from "openclaw' dist/index.js` (should match).
 
 ## Changelog
 
+- **0.3.5** — ingest HTTP route now registers via `registerPluginHttpRoute`
+  from `openclaw/plugin-sdk/webhook-targets` (dynamic / active-registry
+  path used by all channel-style plugins), replacing the previous
+  `api.registerHttpRoute` call. The latter writes to the load-time
+  registry which the gateway HTTP server can drift away from after a
+  registry swap, leaving the route 404 even though the plugin loads
+  cleanly. Diagnosed on thfs 2026-05-15.
 - **0.3.4** — esbuild bundle with `--external:openclaw --external:better-sqlite3`;
   added `contracts.tools` to `openclaw.plugin.json` for OC `2026.5.4+` manifest gate.
   Fixes `ERR_MODULE_NOT_FOUND: Cannot find package 'openclaw'` and

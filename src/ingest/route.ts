@@ -1,4 +1,5 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/core";
+import { registerPluginHttpRoute } from "openclaw/plugin-sdk/webhook-targets";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleIngest, type IngestDeps, type IngestResponse, type OpenClawRpcClient, type IdentifierResolver } from "./endpoint.js";
 import { createRealRpcClient } from "./real_rpc_client.js";
@@ -12,6 +13,14 @@ import { findByWxid, upsertCustomer } from "../customer_map/repository.js";
  * URL: POST /plugins/openclaw-customer-bridge/ingest
  * Auth: Bearer token (matched against `config.ingestAuthToken`)
  * Body: see endpoint.ts IngestRequest interface
+ *
+ * Why registerPluginHttpRoute (not api.registerHttpRoute): the latter writes
+ * to the load-time registry, which the gateway HTTP server can drift away
+ * from after registry swaps (config reload, plugin install). Channel-style
+ * plugins (wecom, bluebubbles, zalo, googlechat) all use this dynamic API
+ * so their routes survive on the active runtime registry. Customer-bridge
+ * is a non-channel plugin, so without this it 404s after restart on OC
+ * 2026.5.x. Diagnosed on thfs .140 2026-05-15.
  */
 
 const INGEST_PATH = "/plugins/openclaw-customer-bridge/ingest";
@@ -76,6 +85,15 @@ export interface RegisterIngestRouteOpts {
   identifyCustomer?: IdentifierResolver;
 }
 
+/**
+ * Held across `registerIngestRoute` calls so a plugin reload (or
+ * `--force` reinstall + restart cycle that re-runs `register()`) can drop
+ * the previous handle before claiming the path again. Without this, the
+ * second registration sees the path already occupied and falls back to
+ * the stale closure that points at the prior `deps` snapshot.
+ */
+let activeUnregister: (() => void) | null = null;
+
 export function registerIngestRoute(opts: RegisterIngestRouteOpts): void {
   if (!opts.authToken) {
     console.warn("[customer-bridge] ingest route NOT registered: ingestAuthToken not configured");
@@ -98,43 +116,55 @@ export function registerIngestRoute(opts: RegisterIngestRouteOpts): void {
     // route doesn't override it.
   };
 
-  opts.api.registerHttpRoute({
-    path: INGEST_PATH,
-    auth: "plugin",
-    match: "exact",
-    handler: async (req: IncomingMessage, res: ServerResponse): Promise<boolean | void> => {
-      if (req.method !== "POST") {
-        res.statusCode = 405;
-        res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ ok: false, error_code: "METHOD", error_message: "POST only" }));
-        return true;
-      }
-
-      // Read body
-      const chunks: Buffer[] = [];
-      for await (const c of req) chunks.push(c as Buffer);
-      const raw = Buffer.concat(chunks).toString("utf-8");
-
-      let body: unknown = null;
-      try {
-        body = raw.length ? JSON.parse(raw) : null;
-      } catch {
-        res.statusCode = 400;
-        res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ ok: false, error_code: "SCHEMA", error_message: "invalid JSON" }));
-        return true;
-      }
-
-      const result = await handleIngest(deps, req.headers["authorization"], body);
-      res.statusCode = mapStatus(result);
+  const handler = async (req: IncomingMessage, res: ServerResponse): Promise<boolean | void> => {
+    if (req.method !== "POST") {
+      res.statusCode = 405;
       res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify(result));
+      res.end(JSON.stringify({ ok: false, error_code: "METHOD", error_message: "POST only" }));
       return true;
-    },
+    }
+
+    // Read body
+    const chunks: Buffer[] = [];
+    for await (const c of req) chunks.push(c as Buffer);
+    const raw = Buffer.concat(chunks).toString("utf-8");
+
+    let body: unknown = null;
+    try {
+      body = raw.length ? JSON.parse(raw) : null;
+    } catch {
+      res.statusCode = 400;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: false, error_code: "SCHEMA", error_message: "invalid JSON" }));
+      return true;
+    }
+
+    const result = await handleIngest(deps, req.headers["authorization"], body);
+    res.statusCode = mapStatus(result);
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(result));
+    return true;
+  };
+
+  if (activeUnregister) {
+    try { activeUnregister(); } catch { /* ignore */ }
+    activeUnregister = null;
+  }
+
+  activeUnregister = registerPluginHttpRoute({
+    path: INGEST_PATH,
+    match: "exact",
+    auth: "plugin",
+    pluginId: "openclaw-customer-bridge",
+    source: "customer-bridge-ingest",
+    replaceExisting: true,
+    handler,
+    log: (msg) => console.warn(`[customer-bridge] route: ${msg}`),
   });
 
   console.log(
     `[customer-bridge] ingest route registered at POST ${INGEST_PATH}` +
-      ` (mode=${opts.stubMode ? "stub" : "real-transcript-write"}, agentId=${opts.agentId})`
+      ` (mode=${opts.stubMode ? "stub" : "real-transcript-write"}, agentId=${opts.agentId},` +
+      ` api=registerPluginHttpRoute/dynamic)`
   );
 }
