@@ -75,7 +75,7 @@ async function getClient(endpoint: WechatMcpEndpoint): Promise<Client> {
     eventSourceInit: { fetch: ((u: URL | string, init?: RequestInit) => fetch(u as string, { ...init, headers: { ...(init?.headers as Record<string, string>), ...headers } })) as unknown as typeof fetch },
     requestInit: { headers },
   });
-  const client = new Client({ name: "openclaw-customer-bridge", version: "0.3.6" }, { capabilities: {} });
+  const client = new Client({ name: "openclaw-customer-bridge", version: "0.3.7" }, { capabilities: {} });
   await client.connect(transport);
   cachedClient = client;
   cachedKey = key;

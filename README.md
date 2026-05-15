@@ -124,6 +124,17 @@ to the bundle. Verify with `grep 'from "openclaw' dist/index.js` (should match).
 
 ## Changelog
 
+- **0.3.7** — declare `activation.onStartup: true` in `openclaw.plugin.json`
+  so the gateway includes us in `startupPluginIds` and therefore runs our
+  registered services from `startPluginServices()` post-attach. Without
+  this the manifest classifier (`shouldConsiderForGatewayStartup` in OC
+  `2026.5.7` channel-plugin-ids module) drops the plugin from the startup
+  set entirely — `register()` is called for `inspect`/`doctor` but
+  `service.start()` callbacks are never invoked, so the 0.3.6 deferred
+  registration never fired. End-to-end POST verified on thfs .140
+  2026-05-15: returns `HTTP 400 SCHEMA` (auth + route mounted) instead
+  of 404. http server listening log now reports
+  `2 plugins: openclaw-customer-bridge, wecom-openclaw-plugin`.
 - **0.3.6** — ingest route registration moved out of `register()` and into
   a deferred `api.registerService({ id, start })` callback so it fires from
   `startPluginServices()` — the same lifecycle slot

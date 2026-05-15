@@ -2,6 +2,9 @@
   "id": "openclaw-customer-bridge",
   "channels": [],
   "skills": ["./skills"],
+  "activation": {
+    "onStartup": true
+  },
   "contracts": {
     "tools": [
       "customer_classify_chat",
